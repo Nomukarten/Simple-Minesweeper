@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>  
+    <style>
+        body {
+     margin: 0;
+     padding: 0;
+     text-align: center;
+    }
+    .wrapper {
+     margin: 0 auto;
+    }
+        .board{
+            display: grid;
+            margin: 0 auto;
+            justify-content: center;
+            align-content: center;
+            gap: 2px;
+            width: 40%;
+        }
+        .cell{
+            aspect-ratio: 1/1;
+            background-color: blueviolet;
+            border-color: blueviolet;
+            border-radius: 5px;
+        }
+        .cell.open{
+            background-color: transparent;
+        }
+        .face{
+            font-size: xx-large;
+            
+        }
+        .button_wrapper{
+            margin-top: 1em; 
+            margin-bottom: 1em;
+            display: block; 
+        }
+        .restart_btn{
+            background-color: #26a9f5;
+            border-color: #26a9f5;
+            border-radius: 5px;
+            width: 80px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <main id="app">
+            <h1>Minesweeper</h1>
+            <div class="button_wrapper">
+                <button @click = "restart" class="restart_btn">Restart</button>
+            <div class="button_wrapper">
+                <span class="face">
+                    <span v-if="win">🥳</span>
+                    <span v-else-if="lose">🤯</span>
+                    <span v-else>😉</span>
+            </div>
+            </span>
+            </div>
+           
+            <div class="board" :style="boardStyle">
+                <button v-for="(cell, i) in cells" 
+                class="cell" 
+                :class="{open: !seals[i]}"
+                @click.left="leftClickCell(i)"
+                @click.right.prevent = "rightClickCell(i)">
+            
+            <span v-if="flags[i]">🚩</span>
+            <span v-else-if="seals[i]"></span>
+            <span v-else-if="cells[i] === -1">💥</span>
+            <span v-else-if="cells[i] === 0"></span>
+            <span v-else>{{cell}}</span>
+            </button>
+            </div>
+        </main>
+    </div>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            mounted(){
+                this.restart();
+            },
+            data(){
+                return{
+                    row: 10,
+                    col: 10,
+                    bomb: 10,
+                    cells: new Array(100).fill(0),
+                    seals: new Array(100).fill(true),
+                    flags: new Array(100).fill(false),
+                };
+            },
+            computed:{
+                boardStyle(){
+                    const template = (n) => Array(n).fill(0).map(() => "1fr").join(" ");
+                    return{
+                        gridTemplateRows: template(this.row),
+                        gridTemplateColumns: template(this.col),
+                    };
+                },
+                win(){
+                    return this.seals.filter((s) => s).length === this.bomb;
+                },
+                lose(){
+                    return !!this.cells.find((c,i)=> c === -1 && !this.seals[i])
+                }
+            },
+            methods:{
+                around(i){
+                    const {col, row} = this;
+                    const set = new Set([
+                        i-col-1,
+                        i-col,
+                        i-col+1,
+                        i-1,
+                        i+1,
+                        i+col-1,
+                        i+col,
+                        i+col+1,
+                    ]);
+                    if(i<col){
+                        set.delete(i-col-1);
+                        set.delete(i-col);
+                        set.delete(i-col+1);
+                    }
+                    if(i % col === 0){
+                        set.delete(i-col-1);
+                        set.delete(i-1);
+                        set.delete(i+col-1);
+                    }
+                    if(i % col === col-1){
+                        set.delete(i-col+1);
+                        set.delete(i+1);
+                        set.delete(i+col+1);
+                    }
+                    if(i + col >= row*col){
+                        set.delete(i+col-1);
+                        set.delete(i+col);
+                        set.delete(i+col+1);
+                    }
+                    return Array.from(set);
+                },
+                restart()
+                {
+                    let {row, col, bomb} = this;
+                    const cells = new Array(row*col).fill(0);
+                    const indexes = cells.map((_,i)=>i);
+                    while(--bomb >= 0){
+                        const i = indexes[Math.floor(Math.random() * indexes.length)];
+                        console.log(bomb);
+                        indexes.splice(i,1);
+                        cells[i] = -1;
+                    }
+                    this.cells = cells.map((c,i)=> 
+                    c === -1 
+                    ? c
+                    : this.around(i).filter((i) => cells[i] === -1).length
+                    );
+                    this.seals = new Array(row*col).fill(true);
+                    this.flags = new Array(row* col).fill(false);
+                },
+                leftClickCell(i){
+                    if(this.flags[i] || this.win || this.lose)
+                        return;
+                    this.open(i);
+                },
+                rightClickCell(i){
+                    console.log("whoa");
+                    if(!this.seals[i] || this.win || this.lose)
+                        return;
+                    this.flags[i] = !this.flags[i];
+                },
+                open(i) {
+                    if(!this.seals[i]) 
+                        return;
+                    this.seals[i] = false;
+
+                     if(this.cells[i] !== 0) 
+                        return;
+
+                     for(const j of this.around(i)){
+                        this.open(j);
+                     }
+                },
+            }
+        }).mount("#app")
+    </script>
+</body>
+</html>
